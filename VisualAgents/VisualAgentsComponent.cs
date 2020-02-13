@@ -32,6 +32,13 @@ namespace VisualAgents
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
+            pManager.AddPointParameter("Start", "S", "Start Position", GH_ParamAccess.item);
+            pManager.AddVectorParameter("Direction", "D", "Start Direction", GH_ParamAccess.item);
+            pManager.AddIntegerParameter("Detail", "D", "Number of samples of the isovist", GH_ParamAccess.item, 20);
+            pManager.AddNumberParameter("Field", "F", "Visual field in degrees", GH_ParamAccess.item, 170);
+
+            pManager.AddCurveParameter("Obstacles", "O", "Obstacles in curves", GH_ParamAccess.list);
+            pManager.AddBooleanParameter("Reset", "R", "Reset the agent", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -39,6 +46,7 @@ namespace VisualAgents
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
+            pManager.AddPointParameter("Position", "P", "Current Position of the agent", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -48,7 +56,34 @@ namespace VisualAgents
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
+            bool reset = false;
+            DA.GetData("Reset", ref reset);
+            List<Curve> curves = new List<Curve>();
+            if (!DA.GetDataList("Obstacles", curves))
+                return;
+            int detail = 1;
+            DA.GetData("Detail", ref detail);
+            double field = 1;
+            DA.GetData("Field", ref field);
+            Point3d P = Point3d.Unset;
+            if (!DA.GetData("Start", ref P))
+                return;
+            Vector3d D = Vector3d.Unset;
+            if (!DA.GetData("Direction", ref D))
+                return;
+
+            if (agent == null || reset)
+            {
+                agent = new IsoAgent(detail, field, P, D);
+            }
+
+            agent.Observe(curves);
+            agent.Update();
+
+            DA.SetData(0, agent.pos);
         }
+
+        public IsoAgent agent;
 
         /// <summary>
         /// Provides an Icon for every component that will be visible in the User Interface.
